@@ -5,6 +5,8 @@ namespace App\Controllers;
 use CodeIgniter\Controller;
 use App\Models\M_clean;
 use TCPDF;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class Home extends BaseController
 {
@@ -891,8 +893,12 @@ public function print_do()
     require_once FCPATH . 'tcpdf/tcpdf.php';
     $model = new M_Clean();
     
+	$a = $this->request->getPost('awal');
+	$b = $this->request->getPost('akhir');
     // Mengambil data tb_order berdasarkan id_order
     $data['wkwk'] = $model->join('tb_order', 'tb_user', 'tb_order.id_user = tb_user.id_user');
+
+	$data['wkwk'] = $model->cari2('tb_order','tb_user','tb_order.id_user=tb_user.id_user', $a,$b);
 
     $pdf = new TCPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
     // Set document information
@@ -951,6 +957,114 @@ public function history_order(){
 	return redirect()->to('home/login');
 }
 }
+
+public function laporan()
+	{
+		if (session()->get('level')>0) {
+			$model = new M_clean();
+		
+		echo view ('header');
+		echo view ('menu');
+		echo view('laporan');
+		echo view('footer');
+	}else{
+		return redirect()->to('home/login');
+	}
+	}
+
+	public function aksi_printb_laporan() {
+		$model = new M_clean();
+
+		$a = $this->request->getPost('awal');
+		$b = $this->request->getPost('akhir');
+		
+		$data['wkwk'] = $model->cari2('tb_order','tb_user','tb_order.id_user=tb_user.id_user', $a,$b);
+		
+		echo view('printb_laporan', $data);
+	}
+
+	public function PrintToExcel()
+    {
+		$model = new M_clean();
+        // Menerima input tanggal dari form
+        $awal = $this->request->getPost('awal');
+        $akhir = $this->request->getPost('akhir');
+
+        // Mengambil data dari model
+        $data = $model->cari2('tb_order', 'tb_user', 'tb_order.id_user = tb_user.id_user', $awal, $akhir);
+
+        // Memanggil method generateExcel untuk membuat file Excel
+        $this->generateExcel($data);
+    }
+
+    public function generateExcel($data)
+{
+    $spreadsheet = new Spreadsheet();
+    $sheet = $spreadsheet->getActiveSheet();
+
+    // Set header untuk kolom
+    $sheet->setCellValue('A1', 'Nama Pemesan');
+    $sheet->setCellValue('B1', 'Lokasi');
+    $sheet->setCellValue('C1', 'Menu Tempat');
+    $sheet->setCellValue('D1', 'Tanggal');
+    $sheet->setCellValue('E1', 'Durasi');
+    $sheet->setCellValue('F1', 'Pengerjaan');
+    $sheet->setCellValue('G1', 'Harga');
+
+    // Mengisi data ke dalam sheet
+    $rowIndex = 2; // Mulai dari baris 2
+    foreach ($data as $row) {
+        $sheet->setCellValue('A' . $rowIndex, $row->username);
+        $sheet->setCellValue('B' . $rowIndex, $row->lokasi);
+        $sheet->setCellValue('C' . $rowIndex, $row->menu_tempat);
+        $sheet->setCellValue('D' . $rowIndex, $row->tgl);
+        $sheet->setCellValue('E' . $rowIndex, $row->durasi);
+        $sheet->setCellValue('F' . $rowIndex, $row->waktu);
+        $sheet->setCellValue('G' . $rowIndex, $row->total_harga);
+
+        $rowIndex++;
+    }
+
+    // Hitung total harga
+    $total = "=SUM(G2:G" . ($rowIndex - 1) . ")";
+
+    // Tulis label "Total Harga" di bawah kolom data A-F
+    $sheet->setCellValue('F' . $rowIndex, 'Total Harga');
+
+    // Tulis rumus total harga di bawah data G
+    $sheet->setCellValue('G' . $rowIndex, $total);
+
+    // Mengatur lebar kolom
+    $spreadsheet->getActiveSheet()->getColumnDimension('A')->setWidth(20);
+    $spreadsheet->getActiveSheet()->getColumnDimension('B')->setWidth(35);
+    $spreadsheet->getActiveSheet()->getColumnDimension('C')->setWidth(15);
+    $spreadsheet->getActiveSheet()->getColumnDimension('D')->setWidth(15);
+    $spreadsheet->getActiveSheet()->getColumnDimension('E')->setWidth(15);
+    $spreadsheet->getActiveSheet()->getColumnDimension('F')->setWidth(20);
+    $spreadsheet->getActiveSheet()->getColumnDimension('G')->setWidth(15);
+
+    // Menambahkan border
+    $lastColumn = $sheet->getHighestColumn();
+    $lastRow = $sheet->getHighestRow();
+    $styleArray = [
+        'borders' => [
+            'allBorders' => [
+                'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+            ],
+        ],
+    ];
+    $sheet->getStyle('A1:' . $lastColumn . $lastRow)->applyFromArray($styleArray);
+
+    // Setelah mengisi data, simpan spreadsheet ke dalam file atau kirim ke browser
+    $writer = new Xlsx($spreadsheet);
+    $filename = 'Laporan_Order.xlsx';
+    header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    header('Content-Disposition: attachment;filename="' . $filename . '"');
+    header('Cache-Control: max-age=0');
+    $writer->save('php://output');
+}
+
+
 
 }
 

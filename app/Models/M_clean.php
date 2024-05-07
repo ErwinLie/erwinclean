@@ -119,4 +119,11 @@ Class M_clean extends Model
                         ->getwhere($field." between '$awal' and '$akhir'")
                         ->getResult();
     }
+
+    public function cari2($table, $table2, $on, $awal, $akhir){
+        return $this->db->table($table)
+                        ->join($table2,$on,'left')
+                        ->getWhere("tgl BETWEEN '$awal' AND '$akhir'")
+                        ->getResult();
+}
 }

@@ -30,7 +30,7 @@
       }
       ?>
 
-      <?php
+      <!-- <?php
       if (session()->get('level') == 2){
       ?>
       <li class="nav-item">
@@ -44,6 +44,22 @@
 
       }
       ?>
+
+<?php
+      if (session()->get('level') == 2){
+      ?>
+<li class="nav-item">
+        <a class="nav-link " href="<?=base_url('home/laporan')?>">
+          <i class="far fa-file-alt"></i>
+          <span>Laporan</span>
+        </a>
+      </li>
+      <?php 
+      } else {
+
+      }
+      ?>
+
       <?php
       if (session()->get('level') == 3){
       ?>
